@@ -1,0 +1,79 @@
+/*
+This is a tool in MAYA that uses Bifrost Graph to read Alembic sequence files and convert them into regular meshes. 
+With this tool, MAYA can read Alembic sequence files, allowing various rendering engines to render them without worrying about the issue of unsupported Bifrost objects, such as REDSHIFT.
+*/
+
+global proc pzMayaBifMesh()
+{
+	if (`window -ex MayaBifMeshUI`) deleteUI MayaBifMeshUI;
+	window -title "MayaBifMesh v1.0" -menuBar true -w 300 -s 1 MayaBifMeshUI;
+	columnLayout cl1;
+	//text -l "mesh count" -w 300;
+	//textField  -tx 45 -w 300 MayaBifTMeshCount;
+	button -l "one model" -c "MayaBifMeshOne" -w 300 ;
+	button -l "mulit model" -c "MayaBifMeshMulit" -w 300;
+	showWindow; 
+}
+
+global proc MayaBifMeshMulit()
+{    
+    string $sel[] =`ls -sl`;
+    string $eachsel;
+    for ( $eachsel in $sel)
+    {    
+        select -cl  ;
+        select -r $eachsel ;
+        pickWalk -d down;
+        string $downsel[] = `ls -sl`;
+        print $downsel[0];
+        string $bifGeo =`createNode "bifrostGeoToMaya" -n ($eachsel+"_b2m")`;        
+        connectAttr -f ($downsel[0]+".meshes") ($bifGeo+".bifrostGeo");
+        string $bifGeoMesh = ($bifGeo+".mayaMesh");     
+        string $tramsform =`createNode "tramsform" -n ($eachsel+"_trans_0")`;
+        string $mesh =`createNode "mesh" -n ($eachsel+"_mesh_0") -p $tramsform`;
+        connectAttr -f ($bifGeo+".mayaMesh[0]") ($mesh+".inMesh");
+        refresh -f;
+        int $count = `getAttr -size $bifGeoMesh`;    
+        int $i;
+        for ($i = $count; $i > 0; $i--) 
+        {
+            int $ii = $i-1;
+            print $ii;
+            string $tramsform =`createNode "tramsform" -n ($eachsel+"_trans_"+$ii)`;
+            string $mesh =`createNode "mesh" -n ($eachsel+"_mesh_"+$ii) -p $tramsform`;
+            connectAttr -f ($bifGeo+".mayaMesh["+$ii+"]") ($mesh+".inMesh");            
+        }    
+    }
+}
+
+global proc MayaBifMeshOne()
+{    
+    string $sel[] =`ls -sl`;
+    string $eachsel;
+    for ( $eachsel in $sel)
+    {    
+        
+        string $tramsformGrp =`createNode "tramsform" -n ($eachsel+"_b2m_grp")`;
+        select -cl  ;
+        select -r $eachsel ;
+        pickWalk -d down;
+        string $downsel[] = `ls -sl`;
+        print $downsel[0];
+        string $bifGeo =`createNode "bifrostGeoToMaya" -n ($eachsel+"_b2m")`;        
+        connectAttr -f ($downsel[0]+".meshes") ($bifGeo+".bifrostGeo");
+        string $bifGeoMesh = ($bifGeo+".mayaMesh");     
+        string $tramsform =`createNode "tramsform" -n ($eachsel+"_trans_0")`;
+        string $mesh =`createNode "mesh" -n ($eachsel+"_mesh_0") -p $tramsform`;
+        connectAttr -f ($bifGeo+".mayaMesh[0]") ($mesh+".inMesh");
+        refresh -f;
+        int $count = `getAttr -size $bifGeoMesh`;        
+        int $i;
+        for ($i = $count; $i > 0; $i--) 
+        {
+            int $ii = $i-1;
+            print $ii;
+            string $mesh =`createNode "mesh" -n ($eachsel+"_mesh_"+$ii) -p $tramsformGrp`;
+            connectAttr -f ($bifGeo+".mayaMesh["+$ii+"]") ($mesh+".inMesh");            
+        }    
+    }
+}
